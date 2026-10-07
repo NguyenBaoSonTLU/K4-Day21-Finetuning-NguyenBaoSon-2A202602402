@@ -73,7 +73,7 @@ def score_run(model, tok, system_prompt, label):
     return scores, preds, rpreds
 
 
-scores_a, preds_a, _ = score_run(model, tok, generate.NAIVE_PROMPT, "(a) base + naive prompt")
+scores_a, preds_a, rpreds_a = score_run(model, tok, generate.NAIVE_PROMPT, "(a) base + naive prompt")
 scores_b, preds_b, rpreds_b = score_run(model, tok, generate.OPTIMIZED_PROMPT, "(b) base + optimized prompt")
 
 # %% [markdown]
@@ -84,6 +84,7 @@ scores_b, preds_b, rpreds_b = score_run(model, tok, generate.OPTIMIZED_PROMPT, "
 
 # %%
 frozen = {
+    "frozen_at_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
     "tier": TIER.name,
     "model": TIER.model_id,
     "baseline_a": scores_a.as_dict(),
@@ -94,7 +95,12 @@ frozen = {
     "n_regression": len(regression),
     "eval_limit": EVAL_LIMIT or None,
     "smoke_mode": bool(EVAL_LIMIT),
+    "eval_sha256": {name: __import__("hashlib").sha256((ROOT / "data" / name).read_bytes()).hexdigest()
+                    for name in ("eval_target.jsonl", "eval_regression.jsonl")},
 }
+report.write_json({"target_a": preds_a, "target_b": preds_b,
+                   "regression_a": rpreds_a, "regression_b": rpreds_b},
+                  "baseline_predictions.json", results_dir=ROOT / "results")
 report.write_json(frozen, "baselines_frozen.json", results_dir=ROOT / "results")
 print(json.dumps(frozen, ensure_ascii=False, indent=2))
 

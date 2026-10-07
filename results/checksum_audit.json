@@ -1,0 +1,25 @@
+{
+  "explanation": "Git Windows checkout converted LF to CRLF; no corpus content changed. Holdout bytes hashed only, not used as examples.",
+  "files": {
+    "eval_regression.jsonl": {
+      "reference_sha16": "9c6ba90ea86e28fb",
+      "raw_sha16": "cc5d4ce669c329c1",
+      "lf_sha16": "9c6ba90ea86e28fb"
+    },
+    "eval_target.jsonl": {
+      "reference_sha16": "2991050fefb848c8",
+      "raw_sha16": "1d6b5ae8f266d8a8",
+      "lf_sha16": "2991050fefb848c8"
+    },
+    "holdout_secret.jsonl": {
+      "reference_sha16": "be3dd38d058871a5",
+      "raw_sha16": "c4c090b57d5b269e",
+      "lf_sha16": "be3dd38d058871a5"
+    },
+    "train_seed.jsonl": {
+      "reference_sha16": "2a58fe45d7315da0",
+      "raw_sha16": "0a60cb6d4cfddc41",
+      "lf_sha16": "2a58fe45d7315da0"
+    }
+  }
+}

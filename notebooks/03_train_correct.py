@@ -37,6 +37,9 @@ from labkit.config import SPECS, get_tier, training_epochs
 
 ROOT = pathlib.Path.cwd() if (pathlib.Path.cwd() / "data").exists() else pathlib.Path.cwd().parent
 TIER = get_tier(os.environ.get("COMPUTE_TIER", "T4"))
+from dataclasses import replace
+token_stats = json.loads((ROOT / "results" / "token_stats.json").read_text(encoding="utf-8"))
+TIER = replace(TIER, max_length=min(TIER.max_length, token_stats["suggested_max_length"]))
 SPEC = SPECS["correct"]
 print(f"{TIER.name} · {TIER.model_id} · {SPEC.label}")
 print(device.banner())      # which precision is ACTUALLY being used, and why
@@ -120,7 +123,7 @@ print(f"epochs={EPOCHS}  ->  {STEPS} optimizer steps  (NB4 runs its contrasts at
 want_sft = train.sft_config_kwargs(
     TIER, SPEC, output_dir=str(ROOT / "adapters" / SPEC.key),
     num_train_epochs=EPOCHS, mask_mode=MASK_MODE,
-    total_steps=STEPS,
+    max_steps=STEPS, total_steps=STEPS,
 )
 sft_kwargs, dropped = train.filter_kwargs(SFTConfig, want_sft, label="SFTConfig")
 if dropped:
@@ -136,6 +139,8 @@ print(json.dumps({k: str(v) for k, v in sft_kwargs.items()}, indent=2)[:900])
 
 # %%
 generate.free_memory()
+from transformers import set_seed
+set_seed(42)  # SFTTrainer creates LoRA weights before Trainer applies its seed.
 trainer = SFTTrainer(
     model=model,
     args=SFTConfig(**sft_kwargs),
@@ -149,6 +154,7 @@ trainer = SFTTrainer(
 # scripts/probe_precision.py. No-op on bf16/fp32 hardware.
 fix = train.align_trainable_precision(trainer.model)
 print("precision fix:", fix)
+report.write_json(train.verify_trainer_mask(trainer), "trainer_mask_correct.json", results_dir=ROOT / "results")
 
 t0 = time.perf_counter()
 result = trainer.train()
@@ -163,15 +169,19 @@ print(f"train {elapsed:.0f}s  final loss {result.training_loss:.4f}")
 # %%
 out = ROOT / "adapters" / SPEC.key
 trainer.model.save_pretrained(out)
+trainer.state.save_to_json(str(out / "trainer_state.json"))
 tok.save_pretrained(out)
 print("saved ->", out)
 
 row = train.summarize_run(SPEC, TIER, targets, trainable, elapsed, generate.peak_vram_gb())
 row["final_loss"] = round(result.training_loss, 4)
 row["mask_mode"] = MASK_MODE
+row["initialization_seed"] = 42
+row["max_length"] = TIER.max_length
 # Record the step budget so NB5/verify can CHECK that the four runs are comparable,
 # instead of trusting that they were configured the same way.
-row["max_steps"] = STEPS
+row["max_steps"] = trainer.state.global_step
+assert row["max_steps"] == STEPS
 report.append_row(row, results_dir=ROOT / "results")
 print(json.dumps(row, ensure_ascii=False, indent=2))
 

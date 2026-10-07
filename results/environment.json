@@ -1,0 +1,19 @@
+{
+  "recorded_date_local": "2026-10-07",
+  "timezone": "Asia/Saigon",
+  "python": "3.12.2",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "tier": "LAPTOP",
+  "model_choice_reason": "4 GB local RTX 3050 GPU; use a small instruction-tuned base for all comparisons.",
+  "epochs": 2,
+  "eval_limit": null,
+  "seed": 42,
+  "data_sha256": {
+    "eval_regression.jsonl": "cc5d4ce669c329c1750c4696e28e9d77919e191fbace320866a4acc99ea2ffef",
+    "eval_target.jsonl": "1d6b5ae8f266d8a8fbe527dd9c85deacac2d1265e1cb0674029f4e85454692d4",
+    "train_seed.jsonl": "0a60cb6d4cfddc416d47c7dd3da4a5b34c26b63331e5acfbcb1a3f6ce53ae5f7"
+  },
+  "holdout_used": false,
+  "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU, 4096 MiB, 596.36"
+}

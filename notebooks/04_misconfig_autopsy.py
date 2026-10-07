@@ -30,6 +30,9 @@ from labkit.config import CONTRAST_KEYS, SPECS, get_tier, training_epochs
 
 ROOT = pathlib.Path.cwd() if (pathlib.Path.cwd() / "data").exists() else pathlib.Path.cwd().parent
 TIER = get_tier(os.environ.get("COMPUTE_TIER", "T4"))
+from dataclasses import replace
+token_stats = json.loads((ROOT / "results" / "token_stats.json").read_text(encoding="utf-8"))
+TIER = replace(TIER, max_length=min(TIER.max_length, token_stats["suggested_max_length"]))
 
 from datasets import Dataset
 
@@ -89,6 +92,8 @@ def run_contrast(key: str) -> dict:
     lora_kwargs, _ = train.filter_kwargs(
         LoraConfig, train.lora_config_kwargs(spec, targets), label=f"LoraConfig[{key}]")
 
+    from transformers import set_seed
+    set_seed(42)  # Reset for each contrast before LoRA initialization.
     trainer = SFTTrainer(model=model, args=SFTConfig(**sft_kwargs),
                          train_dataset=train_ds, processing_class=tok,
                          peft_config=LoraConfig(**lora_kwargs))
@@ -100,15 +105,21 @@ def run_contrast(key: str) -> dict:
               f"trainable tensors bf16 -> fp32 for the fp16 GradScaler")
 
     t0 = time.perf_counter()
+    report.write_json(train.verify_trainer_mask(trainer), f"trainer_mask_{key}.json", results_dir=ROOT / "results")
     res = trainer.train()
     elapsed = time.perf_counter() - t0
 
     out = ROOT / "adapters" / key
     trainer.model.save_pretrained(out)
+    trainer.state.save_to_json(str(out / "trainer_state.json"))
 
     row = train.summarize_run(spec, TIER, targets, trainable, elapsed, generate.peak_vram_gb())
     row["final_loss"] = round(res.training_loss, 4)
-    row["max_steps"] = max_steps
+    row["max_steps"] = trainer.state.global_step
+    assert row["max_steps"] == max_steps
+    row["mask_mode"] = os.environ.get("MASK_MODE", "assistant-only")
+    row["initialization_seed"] = 42
+    row["max_length"] = TIER.max_length
     row["teaches"] = spec.teaches
     report.append_row(row, results_dir=ROOT / "results")
 

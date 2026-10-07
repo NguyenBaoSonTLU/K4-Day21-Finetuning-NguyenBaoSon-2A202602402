@@ -30,6 +30,19 @@ from .config import MAX_EFFECTIVE_BATCH, LoraSpec, Tier
 WARMUP_FRACTION = 0.1
 
 
+def verify_trainer_mask(trainer) -> dict:
+    """Check the actual trainer dataset and collator before any optimizer step."""
+    example = trainer.train_dataset[0]
+    expected = list(example["labels"])
+    batch = trainer.data_collator([example])
+    actual = batch["labels"][0].tolist()
+    assert actual[:len(expected)] == expected, "Trainer collator changed the verified loss mask"
+    assert all(x == -100 for x in actual[len(expected):]), "Padding contributes to loss"
+    supervised = sum(x != -100 for x in expected)
+    assert 0 < supervised < len(expected), "Trainer mask covers nothing or everything"
+    return {"labels_preserved": True, "n_tokens": len(expected), "n_supervised": supervised}
+
+
 def planned_steps(n_examples: int, tier: Tier, epochs: float) -> int:
     """Optimizer steps that `epochs` over `n_examples` takes on `tier`.
 

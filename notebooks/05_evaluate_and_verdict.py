@@ -33,6 +33,11 @@ if EVAL_LIMIT:
     target, regression = target[:EVAL_LIMIT], regression[:EVAL_LIMIT]
 
 frozen = json.loads((ROOT / "results" / "baselines_frozen.json").read_text(encoding="utf-8"))
+assert frozen["model"] == TIER.model_id, "Base model changed after freezing baselines"
+for name, expected in frozen.get("eval_sha256", {}).items():
+    assert __import__("hashlib").sha256((ROOT / "data" / name).read_bytes()).hexdigest() == expected, "Eval data changed"
+baseline_preds = json.loads((ROOT / "results" / "baseline_predictions.json").read_text(encoding="utf-8"))
+assert len(baseline_preds["target_b"]) == len(target)
 base_b = ev.GroupScores(**{k: v for k, v in frozen["baseline_b"].items() if k != "extra"})
 base_a = ev.GroupScores(**{k: v for k, v in frozen["baseline_a"].items() if k != "extra"})
 
@@ -95,6 +100,8 @@ def score_adapter(adapter_dir: pathlib.Path, system_prompt: str | None, *,
 scores_ft, preds_ft, rpreds_ft = score_adapter(ROOT / "adapters" / "correct",
                                                generate.NAIVE_PROMPT)
 print("fine-tune:", scores_ft.as_dict())
+report.write_json({"target": preds_ft, "regression": rpreds_ft},
+                  "finetune_predictions.json", results_dir=ROOT / "results")
 
 # %% [markdown]
 # ## 2. Bảng so sánh ba baseline
@@ -161,9 +168,10 @@ for key in CONTRAST_KEYS:
     if not adir.exists():
         print(f"skip {key}: {adir} chưa có — chạy NB4 trước")
         continue
-    s_k, _, _ = score_adapter(adir, generate.NAIVE_PROMPT,
+    s_k, contrast_preds, _ = score_adapter(adir, generate.NAIVE_PROMPT,
                               load_in_4bit=SPECS[key].load_in_4bit,
                               with_regression=False, label=key)
+    report.write_json({"target": contrast_preds}, f"{key}_predictions.json", results_dir=ROOT / "results")
     autopsy.append({"run": key, "target": round(s_k.target, 4),
                     "format": round(s_k.format, 4),
                     "latency_ms": round(s_k.latency_ms, 1), "n": s_k.n})
@@ -189,8 +197,13 @@ report.write_json(autopsy, "autopsy.json", results_dir=ROOT / "results")
 rows = []
 for i, (p, r) in enumerate(zip(preds_ft, target)):
     s_ft = ev.triage_field_accuracy(p, r["label"])
-    rows.append({"i": i, "ticket": r["input"][:70], "ft_score": round(s_ft, 2),
-                 "ft_pred": p.replace("\n", " ")[:90]})
+    base_pred = baseline_preds["target_b"][i]
+    s_b = ev.triage_field_accuracy(base_pred, r["label"])
+    rows.append({"i": i, "ticket": r["input"], "label": r["label"],
+                 "ft_score": round(s_ft, 2), "baseline_b_score": round(s_b, 2),
+                 "delta": round(s_ft - s_b, 2), "baseline_b_pred": base_pred,
+                 "outcome": "win" if s_ft > s_b else "loss" if s_ft < s_b else "tie",
+                 "ft_pred": p})
 rows.sort(key=lambda x: x["ft_score"])
 print("--- 3 ca TỆ NHẤT (bắt buộc đưa vào report) ---")
 print(report.markdown_table(rows[:3], ["i", "ticket", "ft_score", "ft_pred"]))

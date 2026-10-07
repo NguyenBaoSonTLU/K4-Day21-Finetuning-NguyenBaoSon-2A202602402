@@ -35,6 +35,14 @@ def _sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
+def _matches_checksum(path: pathlib.Path, expected: str) -> bool:
+    # Git's Windows checkout may convert LF to CRLF. Accept only that byte-level
+    # transformation; content/whitespace edits must still fail the integrity gate.
+    raw = path.read_bytes()
+    return any(hashlib.sha256(value).hexdigest()[:16] == expected
+               for value in (raw, raw.replace(b"\r\n", b"\n")))
+
+
 def _load_json(path: pathlib.Path):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -178,7 +186,7 @@ def full() -> None:
     ref = _load_json(ROOT / "data" / "checksums.json")
     if ref:
         drift = [f for f, h in ref.items() if (ROOT / "data" / f).exists()
-                 and _sha(ROOT / "data" / f) != h]
+                 and not _matches_checksum(ROOT / "data" / f, h)]
         if not drift:
             check("eval sets unmodified", OK)
         elif declared:

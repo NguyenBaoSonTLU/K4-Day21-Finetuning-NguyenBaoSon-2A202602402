@@ -1,0 +1,5 @@
+{
+  "correct": "{\"intent\": \"doi_tra\", \"urgency\": \"cao\", \"product\": \"chuột không dây\", \"sentiment\": \"trung_tinh\"}",
+  "attn_only": "{\"intent\": \"doi_tra\", \"urgency\": \"trung_binh\", \"product\": \"chuột không dây\", \"sentiment\": \"tieu_cuc\"}",
+  "wrong_lr": "{\"intent\": \"gửi lại\", \"category\": \"nhận xét\", \"label\": \"mã đơn\"}"
+}

@@ -1,0 +1,9 @@
+{
+  "labels_preserved": true,
+  "n_tokens": 91,
+  "n_supervised": 37,
+  "n_examples": 250,
+  "all_prompts_aligned": true,
+  "zero_supervision_examples": 0,
+  "model": "Qwen/Qwen2.5-0.5B-Instruct"
+}

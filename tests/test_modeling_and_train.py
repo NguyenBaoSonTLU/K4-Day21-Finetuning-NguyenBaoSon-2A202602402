@@ -408,3 +408,22 @@ def test_both_training_notebooks_apply_the_precision_fix():
         assert "align_trainable_precision" in src, f"{nb} trains without the F-23 fix"
         assert src.index("align_trainable_precision") < src.index("trainer.train()"), (
             f"{nb} must recast BEFORE training — the optimizer is built inside train()")
+
+
+@pytest.mark.parametrize("actual,valid", [
+    ([-100, -100, 3, 4, -100], True),
+    ([1, 2, 3, 4], False),
+    ([-100, -100, 3, 4, 5], False),
+])
+def test_trainer_mask_detects_prompt_or_padding_supervision(actual, valid):
+    from types import SimpleNamespace
+    tensor_row = SimpleNamespace(tolist=lambda: actual)
+    trainer = SimpleNamespace(
+        train_dataset=[{"labels": [-100, -100, 3, 4]}],
+        data_collator=lambda rows: {"labels": [tensor_row]},
+    )
+    if valid:
+        assert train.verify_trainer_mask(trainer)["n_supervised"] == 2
+    else:
+        with pytest.raises(AssertionError):
+            train.verify_trainer_mask(trainer)

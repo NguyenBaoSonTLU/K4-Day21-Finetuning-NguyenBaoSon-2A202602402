@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "raw eval hashes unchanged since baseline freeze",
+    "all target, format and regression scores recomputed from full predictions",
+    "verdict agrees with unchanged regression gate",
+    "shared model, initialization seed, actual steps, trainer masks and saved parameter counts verified",
+    "five qualitative examples include at least two measured losses",
+    "full-set merge score and at least two hot-swapped adapters verified"
+  ]
+}

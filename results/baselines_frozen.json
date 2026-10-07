@@ -1,0 +1,30 @@
+{
+  "frozen_at_utc": "2026-10-07T11:24:56.903147+00:00",
+  "tier": "LAPTOP",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "baseline_a": {
+    "target": 0.0,
+    "regression": 0.4666666666666667,
+    "format": 0.0,
+    "latency_ms": 1789.2695679992903,
+    "n": 50,
+    "extra": {}
+  },
+  "baseline_b": {
+    "target": 0.395,
+    "regression": 0.4666666666666667,
+    "format": 1.0,
+    "latency_ms": 678.9023319998523,
+    "n": 50,
+    "extra": {}
+  },
+  "optimized_prompt_sha": "719e74d3b6232053",
+  "n_target": 50,
+  "n_regression": 15,
+  "eval_limit": null,
+  "smoke_mode": false,
+  "eval_sha256": {
+    "eval_target.jsonl": "1d6b5ae8f266d8a8fbe527dd9c85deacac2d1265e1cb0674029f4e85454692d4",
+    "eval_regression.jsonl": "cc5d4ce669c329c1750c4696e28e9d77919e191fbace320866a4acc99ea2ffef"
+  }
+}
